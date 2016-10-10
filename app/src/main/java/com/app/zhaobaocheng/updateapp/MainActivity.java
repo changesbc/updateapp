@@ -4,6 +4,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.Handler;
@@ -181,7 +182,8 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onFailure(HttpException e, String s) {
-
+                        e.printStackTrace();
+                        Log.d("MainActivity:","網絡連接失敗");
                     }
 
                     @Override
@@ -224,6 +226,7 @@ public class MainActivity extends AppCompatActivity {
         //回到桌面
         finish();
     }
+
 
 
     //獲得版本號
