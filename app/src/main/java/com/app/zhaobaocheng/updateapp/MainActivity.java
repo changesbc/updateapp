@@ -4,18 +4,28 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.lidroid.xutils.HttpUtils;
+import com.lidroid.xutils.exception.HttpException;
+import com.lidroid.xutils.http.ResponseInfo;
+import com.lidroid.xutils.http.callback.RequestCallBack;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -28,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private String apkurl;
     private String des;
     private ProgressBar progressBar;
-    private TextView tv_splash_plan;
+    private TextView plan;
     private final int MSG_UPDATE_DIALOG=1;
 
     private Handler handler=new Handler(){
@@ -52,10 +62,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         supportRequestWindowFeature(1);  //隱藏標題欄
         setContentView(R.layout.activity_main);
-        versionName = (TextView) findViewById(R.id.splash_tv_versionname);
+        versionName = (TextView) findViewById(R.id.tv_versionname);
         versionName.setText("版本号:"+getVersionName());
 //        progressBar = (ProgressBar) findViewById(R.id.progressBar);
-        tv_splash_plan = (TextView) findViewById(R.id.tv_splash_plan);
+        plan = (TextView) findViewById(R.id.tv_plan);
 
         update();//更新版本
     }
@@ -70,7 +80,8 @@ public class MainActivity extends AppCompatActivity {
                 "", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-
+                //下载更新
+                new DownloadAsyncTask().execute(apkurl);
             }
         });
 
@@ -110,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
 
                     if (conn.getResponseCode() == 200) {
                         //链接成功
-                        Log.d("SplashActivity: ","链接成功");
+                        Log.d("MainActivity: ","链接成功");
                         //获取服务返回的流信息
                         InputStream in=conn.getInputStream();
                         //将获取到的流信息转换成字符串
@@ -121,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
                         apkurl = jsonObject.getString("apkurl");
                         des = jsonObject.getString("des");
 
-                        Log.d("SplashActivity: ","code: "+code+" apkurl: "+apkurl+" des: "+des);
+                        Log.d("MainActivity: ","code: "+code+" apkurl: "+apkurl+" des: "+des);
                         if (code.equals(getVersionName())) {
                             //当前没有新版本
 
@@ -133,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     } else {
                         //连接失败
-                        Log.d("SplashActivity: ","链接失败");
+                        Log.d("MainActivity: ","链接失败");
                     }
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
@@ -147,6 +158,71 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
 
+    }
+
+    class DownloadAsyncTask extends AsyncTask<String, Integer, Boolean> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+//            progressBar.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected Boolean doInBackground(String... params) {
+            String url=params[0];
+            HttpUtils httpUtils=new HttpUtils();
+            //判断SD卡是否挂载
+            if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+                httpUtils.download(url, "/mnt/sdcard/app3.apk", new RequestCallBack<File>() {
+                    @Override
+                    public void onSuccess(ResponseInfo<File> responseInfo) {
+
+                    }
+
+                    @Override
+                    public void onFailure(HttpException e, String s) {
+
+                    }
+
+                    @Override
+                    public void onLoading(long total, long current, boolean isUploading) {
+                        super.onLoading(total, current, isUploading);
+                        plan.setVisibility(View.VISIBLE);
+                        plan.setText(current+"/"+total);
+
+                    }
+                });
+            }
+
+            return true;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            if (result) {
+                try {
+                    Thread.sleep(2000);   //延遲2秒
+                    enterHome();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                finish();
+            } else {
+                Toast.makeText(MainActivity.this,"Download failed",Toast.LENGTH_SHORT).show();
+            }
+
+        }
+    }
+
+    /**
+     * 应用的主界面
+     */
+    private void enterHome() {
+        Intent homeIntent=new Intent(MainActivity.this,HomeActivity.class);
+        startActivity(homeIntent);
+        //回到桌面
+        finish();
     }
 
 
